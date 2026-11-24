@@ -78,8 +78,7 @@ const activeSparks = [];
 // Rocket Launch Class: Sleek, visible golden sparkle shooting gracefully upward (Always golden!)
 class FireworkRocket {
   constructor(targetX, targetY, startX = null, options = {}) {
-    const isMobile = width < 600;
-    this.startX = startX !== null ? startX : targetX + (Math.random() - 0.5) * (isMobile ? 25 : 35);
+    this.startX = startX !== null ? startX : targetX + (Math.random() - 0.5) * 35;
     this.startY = height + 10;
     this.x = this.startX;
     this.y = this.startY;
@@ -93,15 +92,13 @@ class FireworkRocket {
     this.palette = FIREWORK_PALETTES[paletteIndex];
     this.type = options.type || (Math.random() < 0.38 ? 'willow' : (Math.random() < 0.55 ? 'ring' : 'peony'));
 
-    // Relaxed, slow & majestic ascent flight duration:
-    // Mobile: 1.65s to 2.05s (smooth, graceful climb)
-    // Desktop: 1.45s to 1.80s
-    this.duration = (isMobile ? 1.65 : 1.45) + Math.random() * 0.35;
+    // Normal, responsive ascent flight duration (1.05s to 1.25s)
+    this.duration = 1.05 + Math.random() * 0.2;
     this.elapsed = 0;
 
     // Sleek continuous golden streamer trail
     this.trail = [];
-    this.trailLength = isMobile ? 20 : 26; // Refined trailing golden ribbon
+    this.trailLength = 22; // Clearly visible, sleek trailing golden ribbon
     // Fizzy micro-sparks shedding from tail
     this.fizzSparks = [];
     this.twinklePhase = Math.random() * Math.PI * 2;
@@ -111,8 +108,8 @@ class FireworkRocket {
     this.elapsed += dt;
     const progress = Math.min(1, this.elapsed / this.duration);
     
-    // Smooth, gentle ease-out deceleration towards apex
-    const ease = 1 - Math.pow(1 - progress, 1.85);
+    // Natural ease-out deceleration towards apex
+    const ease = 1 - Math.pow(1 - progress, 2.15);
     this.x = this.startX + (this.targetX - this.startX) * ease;
     this.y = this.startY + (this.targetY - this.startY) * ease;
 
@@ -122,15 +119,15 @@ class FireworkRocket {
       this.trail.shift();
     }
 
-    // Shed gentle golden fizzy sparks along the ascent
-    if (Math.random() < 0.70) {
+    // Shed 1-2 tiny golden fizzy sparks along the ascent
+    if (Math.random() < 0.85) {
       this.fizzSparks.push({
-        x: this.x + (Math.random() - 0.5) * 2.5,
-        y: this.y + Math.random() * 2.5,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: 0.4 + Math.random() * 0.9,
+        x: this.x + (Math.random() - 0.5) * 3.0,
+        y: this.y + Math.random() * 3.5,
+        vx: (Math.random() - 0.5) * 1.0,
+        vy: 0.8 + Math.random() * 1.4,
         alpha: 0.95,
-        size: 0.8 + Math.random() * 0.6
+        size: 0.8 + Math.random() * 0.7
       });
     }
 
@@ -139,7 +136,7 @@ class FireworkRocket {
       const sp = this.fizzSparks[i];
       sp.x += sp.vx;
       sp.y += sp.vy;
-      sp.alpha -= dt * 2.2;
+      sp.alpha -= dt * 3.2;
       if (sp.alpha <= 0.05) {
         this.fizzSparks.splice(i, 1);
       }
@@ -147,7 +144,7 @@ class FireworkRocket {
 
     // Fade trail points gracefully
     for (let i = 0; i < this.trail.length; i++) {
-      this.trail[i].alpha *= Math.pow(0.92, dt * 60);
+      this.trail[i].alpha *= Math.pow(0.90, dt * 60);
     }
 
     // Explode right at apex
@@ -260,7 +257,6 @@ class FireworkRocket {
 // Burst Particle Class (Time-based graceful lingering embers)
 class FireworkSpark {
   constructor(x, y, vx, vy, color, secondaryColor = '#ffffff', options = {}) {
-    const isMobile = width < 600;
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -269,22 +265,21 @@ class FireworkSpark {
     this.secondaryColor = secondaryColor;
 
     this.isWillow = options.isWillow || false;
-    // Dainty, refined particle size: 1.2px to 2.2px
-    this.size = options.size || (isMobile ? (1.2 + Math.random() * 0.7) : (1.4 + Math.random() * 0.8));
+    // Dainty, refined particle size: 1.3px to 2.2px
+    this.size = options.size || (1.3 + Math.random() * 0.9);
     this.alpha = 1;
     
-    // Slow, lingering lifespan: 2.3s to 3.2s on mobile for calm, majestic display
-    this.lifespan = options.lifespan || (isMobile ? (2.4 + Math.random() * 0.8) : (2.1 + Math.random() * 0.6));
+    // Normal energetic lifespan: 1.8s to 2.4s
+    this.lifespan = options.lifespan || (1.8 + Math.random() * 0.6);
     this.decayRate = 1.0 / this.lifespan;
     
-    // Gentle air drag and floating low gravity
-    this.drag = options.drag || (isMobile ? 0.948 : 0.956);
-    this.gravity = options.gravity || (this.isWillow ? (isMobile ? 0.042 : 0.058) : (isMobile ? 0.022 : 0.032));
+    this.drag = options.drag || 0.958;
+    this.gravity = options.gravity || (this.isWillow ? 0.075 : 0.042);
 
-    this.flickerSpeed = 6 + Math.random() * 8;
+    this.flickerSpeed = 8 + Math.random() * 10;
     this.flickerOffset = Math.random() * Math.PI * 2;
     this.trail = [];
-    this.trailMax = this.isWillow ? 7 : 4;
+    this.trailMax = this.isWillow ? 6 : 3;
   }
 
   update(dt, time) {
@@ -375,27 +370,25 @@ function createBurst(x, y, palette, type = 'peony') {
   const isMobile = width < 600;
 
   if (type === 'willow') {
-    // Elegant Willow: Sparks arc out gently then cascade down with glowing trails
-    const sparkCount = isMobile ? 22 : 36;
+    // Elegant Willow: Sparks arc out then cascade down with glowing trails
+    const sparkCount = isMobile ? 26 : 38;
     for (let i = 0; i < sparkCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      // Gentle initial expansion speed (calibrated for mobile and desktop)
-      const maxSpd = isMobile ? 1.6 : 2.4;
-      const speed = (isMobile ? 0.6 : 0.9) + Math.pow(Math.random(), 0.6) * maxSpd;
+      const speed = 1.4 + Math.pow(Math.random(), 0.6) * 3.2;
       const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed - (isMobile ? 0.25 : 0.4);
+      const vy = Math.sin(angle) * speed - 0.5;
       const col = palette.colors[i % palette.colors.length];
       activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, {
         isWillow: true,
-        lifespan: isMobile ? (2.6 + Math.random() * 0.8) : (2.4 + Math.random() * 0.7),
-        drag: isMobile ? 0.952 : 0.960,
-        gravity: isMobile ? 0.038 : 0.052
+        lifespan: 2.2 + Math.random() * 0.7,
+        drag: 0.965,
+        gravity: 0.075
       }));
     }
   } else if (type === 'ring') {
-    // Symmetrical Royal Ring expanding at a calm, graceful pace
-    const count = isMobile ? 20 : 30;
-    const ringSpeed = (isMobile ? 1.25 : 1.75) + Math.random() * 0.25;
+    // Symmetrical Royal Ring with contrasting center stars
+    const count = isMobile ? 24 : 32;
+    const ringSpeed = 2.4 + Math.random() * 0.5;
     const mainColor = palette.colors[0];
     const secondColor = palette.colors[Math.min(2, palette.colors.length - 1)];
 
@@ -404,31 +397,24 @@ function createBurst(x, y, palette, type = 'peony') {
       const vx = Math.cos(angle) * ringSpeed;
       const vy = Math.sin(angle) * ringSpeed;
       const col = i % 2 === 0 ? mainColor : secondColor;
-      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, {
-        lifespan: isMobile ? (2.3 + Math.random() * 0.6) : (2.1 + Math.random() * 0.5)
-      }));
+      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.9 + Math.random() * 0.5 }));
     }
-    const centerCount = isMobile ? 5 : 8;
+    const centerCount = isMobile ? 6 : 10;
     for (let i = 0; i < centerCount; i++) {
-      const speed = Math.random() * (isMobile ? 0.6 : 0.9);
+      const speed = Math.random() * 1.1;
       const angle = Math.random() * Math.PI * 2;
-      activeSparks.push(new FireworkSpark(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, palette.colors[1], '#ffffff', {
-        lifespan: isMobile ? 2.0 : 1.8
-      }));
+      activeSparks.push(new FireworkSpark(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, palette.colors[1], '#ffffff', { lifespan: 1.6 }));
     }
   } else {
-    // Classic Peony burst - soft, slow, majestic blossom
-    const sparkCount = isMobile ? 24 : 38;
+    // Classic Peony burst
+    const sparkCount = isMobile ? 28 : 42;
     for (let i = 0; i < sparkCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const maxSpd = isMobile ? 1.5 : 2.3;
-      const speed = (isMobile ? 0.7 : 1.0) + Math.pow(Math.random(), 0.5) * maxSpd;
+      const speed = 1.6 + Math.pow(Math.random(), 0.5) * 3.0;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       const col = palette.colors[Math.floor(Math.random() * palette.colors.length)];
-      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, {
-        lifespan: isMobile ? (2.4 + Math.random() * 0.7) : (2.2 + Math.random() * 0.6)
-      }));
+      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.8 + Math.random() * 0.6 }));
     }
   }
 }
@@ -466,20 +452,20 @@ function handleInteractiveFirework(clientX, clientY, target) {
   // 1. Primary firework directed to the tap location
   launchFirework(clientX, clientY);
 
-  // 2. Cascading show on repeated clicks with relaxed, elegant delays (slowed down for mobile)
+  // 2. Cascading show on repeated clicks
   if (clickCount >= 2) {
     setTimeout(() => {
-      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 80 : 140);
-      const offsetY = Math.max(80, clientY + (Math.random() - 0.5) * 50);
+      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 100 : 160);
+      const offsetY = Math.max(80, clientY + (Math.random() - 0.5) * 60);
       launchFirework(offsetX, offsetY, { type: 'willow' });
-    }, 450); // Relaxed from 180ms to 450ms
+    }, 180);
   }
   if (clickCount >= 3) {
     setTimeout(() => {
-      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 110 : 200);
-      const offsetY = Math.max(70, clientY - 40 - Math.random() * 50);
+      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 150 : 240);
+      const offsetY = Math.max(70, clientY - 50 - Math.random() * 60);
       launchFirework(offsetX, offsetY, { type: 'peony' });
-    }, 900); // Relaxed from 360ms to 900ms
+    }, 360);
     clickCount = 0; // reset sequence
   }
 }
@@ -501,20 +487,18 @@ if (heroSection) {
 
 // Ambient Automatic Festive Fireworks Show
 let lastAmbientTime = 0;
-let nextAmbientInterval = 2800;
+let nextAmbientInterval = 2200;
 
 function checkAmbientFireworks(timestamp) {
   // Only launch ambient fireworks when user is viewing the hero sky (never in footer or cards)
   if (window.scrollY > height * 0.5) return;
 
-  const isMobile = width < 600;
   if (timestamp - lastAmbientTime > nextAmbientInterval) {
     lastAmbientTime = timestamp;
-    // Calibrated peaceful ambient timing: 5.5s-8.5s on mobile, 4.5s-7.5s on desktop
-    nextAmbientInterval = (isMobile ? 5500 : 4500) + Math.random() * 3000;
+    nextAmbientInterval = 3200 + Math.random() * 2400; // 3.2s - 5.6s
 
-    const skyMinX = width * 0.18;
-    const skyMaxX = width * 0.82;
+    const skyMinX = width * 0.15;
+    const skyMaxX = width * 0.85;
     const targetX = skyMinX + Math.random() * (skyMaxX - skyMinX);
     const targetY = height * 0.14 + Math.random() * (height * 0.28);
 

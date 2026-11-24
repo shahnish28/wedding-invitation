@@ -39,16 +39,18 @@ const ctx = canvas ? canvas.getContext('2d') : null;
 
 let width = 0;
 let height = 0;
-let dpr = window.devicePixelRatio || 1;
+let dpr = 1;
 
 function resizeFireworksCanvas() {
   if (!canvas) return;
-  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const isMobile = window.innerWidth < 768;
+  // Clamped DPR on mobile avoids rendering millions of extra pixels while maintaining high-DPI clarity
+  dpr = isMobile ? Math.min(window.devicePixelRatio || 1, 1.25) : Math.min(window.devicePixelRatio || 1, 2);
   const hero = document.getElementById('hero');
   width = hero ? hero.clientWidth : window.innerWidth;
   height = hero ? hero.clientHeight : window.innerHeight;
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
   if (ctx) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -78,6 +80,7 @@ const activeSparks = [];
 // Rocket Launch Class: Sleek, visible golden sparkle shooting gracefully upward (Always golden!)
 class FireworkRocket {
   constructor(targetX, targetY, startX = null, options = {}) {
+    const isMobile = width < 768;
     this.startX = startX !== null ? startX : targetX + (Math.random() - 0.5) * 35;
     this.startY = height + 10;
     this.x = this.startX;
@@ -98,7 +101,7 @@ class FireworkRocket {
 
     // Sleek continuous golden streamer trail
     this.trail = [];
-    this.trailLength = 22; // Clearly visible, sleek trailing golden ribbon
+    this.trailLength = isMobile ? 14 : 20;
     // Fizzy micro-sparks shedding from tail
     this.fizzSparks = [];
     this.twinklePhase = Math.random() * Math.PI * 2;
@@ -114,20 +117,22 @@ class FireworkRocket {
     this.y = this.startY + (this.targetY - this.startY) * ease;
 
     // Record position for sleek continuous comet streamer
-    this.trail.push({ x: this.x, y: this.y, alpha: 1.0 });
+    this.trail.push({ x: this.x, y: this.y });
     if (this.trail.length > this.trailLength) {
       this.trail.shift();
     }
 
-    // Shed 1-2 tiny golden fizzy sparks along the ascent
-    if (Math.random() < 0.85) {
+    // Shed 1 tiny golden fizz spark along the ascent
+    const isMobile = width < 768;
+    const maxFizz = isMobile ? 5 : 9;
+    if (this.fizzSparks.length < maxFizz && Math.random() < (isMobile ? 0.45 : 0.75)) {
       this.fizzSparks.push({
-        x: this.x + (Math.random() - 0.5) * 3.0,
-        y: this.y + Math.random() * 3.5,
-        vx: (Math.random() - 0.5) * 1.0,
-        vy: 0.8 + Math.random() * 1.4,
-        alpha: 0.95,
-        size: 0.8 + Math.random() * 0.7
+        x: this.x + (Math.random() - 0.5) * 2.5,
+        y: this.y + Math.random() * 3.0,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: 0.6 + Math.random() * 1.0,
+        alpha: 0.92,
+        size: 0.8 + Math.random() * 0.6
       });
     }
 
@@ -136,15 +141,10 @@ class FireworkRocket {
       const sp = this.fizzSparks[i];
       sp.x += sp.vx;
       sp.y += sp.vy;
-      sp.alpha -= dt * 3.2;
+      sp.alpha -= dt * 3.4;
       if (sp.alpha <= 0.05) {
         this.fizzSparks.splice(i, 1);
       }
-    }
-
-    // Fade trail points gracefully
-    for (let i = 0; i < this.trail.length; i++) {
-      this.trail[i].alpha *= Math.pow(0.90, dt * 60);
     }
 
     // Explode right at apex
@@ -157,43 +157,39 @@ class FireworkRocket {
 
   draw(time) {
     if (!ctx) return;
-    ctx.save();
     
-    // 1. Sleek Tapered Golden Comet Streamer (Smooth connected ribbon with warm glow)
-    if (this.trail.length > 1) {
-      for (let i = 0; i < this.trail.length - 1; i++) {
-        const p1 = this.trail[i];
-        const p2 = this.trail[i + 1];
-        const ratio = i / (this.trail.length - 1); // 0 at tail tip, 1 at head
-        const lineWidth = 1.2 + ratio * 2.6; // tapers from 1.2px up to 3.8px at head
-        const alpha = p1.alpha * (0.35 + ratio * 0.65);
-
-        // Soft outer golden halo along streamer
-        ctx.globalAlpha = Math.max(0.04, Math.min(0.45, alpha * 0.55));
-        ctx.strokeStyle = '#ff9e00';
-        ctx.lineWidth = lineWidth + 2.4;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-
-        // Intense radiant golden core streamer
-        ctx.globalAlpha = Math.max(0.1, Math.min(0.98, alpha));
-        ctx.strokeStyle = ratio > 0.6 ? '#fff8dc' : (ratio > 0.3 ? '#ffd166' : '#ffb703');
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
+    // 1. Sleek Tapered Golden Comet Streamer (Continuous ribbon drawn in 2 passes)
+    const len = this.trail.length;
+    if (len > 1) {
+      // Pass A: Soft warm golden halo streamer
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = '#ff9e00';
+      ctx.lineWidth = 3.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < len; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
       }
+      ctx.stroke();
+
+      // Pass B: Intense radiant golden core streamer
+      ctx.globalAlpha = 0.92;
+      ctx.strokeStyle = '#ffd166';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < len; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.stroke();
     }
 
     // 2. Fizzy shedding golden sparks
     for (let i = 0; i < this.fizzSparks.length; i++) {
       const sp = this.fizzSparks[i];
-      ctx.globalAlpha = Math.max(0, Math.min(1, sp.alpha * 0.9));
-      ctx.fillStyle = Math.random() < 0.4 ? '#ffffff' : (Math.random() < 0.7 ? '#fff3b0' : '#ffd166');
+      ctx.globalAlpha = sp.alpha * 0.9;
+      ctx.fillStyle = '#ffd166';
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
       ctx.fill();
@@ -203,50 +199,36 @@ class FireworkRocket {
     const flicker = 0.88 + Math.sin(this.elapsed * 42 + this.twinklePhase) * 0.12;
 
     // Outer warm gold halo
-    ctx.globalAlpha = 0.38 * flicker;
+    ctx.globalAlpha = 0.35 * flicker;
     ctx.fillStyle = '#ffb703';
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 8.0, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, 6.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Brilliant golden sparkle body
-    ctx.globalAlpha = 0.88 * flicker;
+    ctx.globalAlpha = 0.92 * flicker;
     ctx.fillStyle = '#ffd166';
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 3.8, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, 3.2, 0, Math.PI * 2);
     ctx.fill();
 
     // Piercing hot white spark center
     ctx.globalAlpha = 1.0 * flicker;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 1.8, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Sleek 4-point sparkle cross star glint
     ctx.globalAlpha = 0.85 * flicker;
     ctx.strokeStyle = '#fff8e7';
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    // Horizontal ray (length: 13px)
-    ctx.moveTo(this.x - 6.5, this.y);
-    ctx.lineTo(this.x + 6.5, this.y);
-    // Vertical ray (length: 13px)
-    ctx.moveTo(this.x, this.y - 6.5);
-    ctx.lineTo(this.x, this.y + 6.5);
+    ctx.moveTo(this.x - 5.5, this.y);
+    ctx.lineTo(this.x + 5.5, this.y);
+    ctx.moveTo(this.x, this.y - 5.5);
+    ctx.lineTo(this.x, this.y + 5.5);
     ctx.stroke();
-
-    // Subtle diagonal diamond glint
-    ctx.globalAlpha = 0.55 * flicker;
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(this.x - 3.2, this.y - 3.2);
-    ctx.lineTo(this.x + 3.2, this.y + 3.2);
-    ctx.moveTo(this.x + 3.2, this.y - 3.2);
-    ctx.lineTo(this.x - 3.2, this.y + 3.2);
-    ctx.stroke();
-
-    ctx.restore();
   }
 
   explode() {
@@ -259,34 +241,31 @@ class FireworkSpark {
   constructor(x, y, vx, vy, color, secondaryColor = '#ffffff', options = {}) {
     this.x = x;
     this.y = y;
+    this.prevX = x;
+    this.prevY = y;
     this.vx = vx;
     this.vy = vy;
     this.color = color;
     this.secondaryColor = secondaryColor;
 
     this.isWillow = options.isWillow || false;
-    // Dainty, refined particle size: 1.3px to 2.2px
-    this.size = options.size || (1.3 + Math.random() * 0.9);
+    this.size = options.size || (1.3 + Math.random() * 0.8);
     this.alpha = 1;
     
-    // Normal energetic lifespan: 1.8s to 2.4s
-    this.lifespan = options.lifespan || (1.8 + Math.random() * 0.6);
+    // Normal energetic lifespan: 1.6s to 2.2s
+    this.lifespan = options.lifespan || (1.6 + Math.random() * 0.5);
     this.decayRate = 1.0 / this.lifespan;
     
     this.drag = options.drag || 0.958;
     this.gravity = options.gravity || (this.isWillow ? 0.075 : 0.042);
 
-    this.flickerSpeed = 8 + Math.random() * 10;
+    this.flickerSpeed = 8 + Math.random() * 8;
     this.flickerOffset = Math.random() * Math.PI * 2;
-    this.trail = [];
-    this.trailMax = this.isWillow ? 6 : 3;
   }
 
   update(dt, time) {
-    this.trail.push({ x: this.x, y: this.y, alpha: this.alpha });
-    if (this.trail.length > this.trailMax) {
-      this.trail.shift();
-    }
+    this.prevX = this.x;
+    this.prevY = this.y;
 
     const step = dt * 60;
     const currentDrag = Math.pow(this.drag, step);
@@ -301,94 +280,80 @@ class FireworkSpark {
 
   draw(time) {
     if (!ctx) return;
-    const flicker = Math.sin(time * this.flickerSpeed + this.flickerOffset) * 0.14;
-    const currentAlpha = Math.max(0.1, Math.min(1, this.alpha + flicker));
+    const flicker = Math.sin(time * this.flickerSpeed + this.flickerOffset) * 0.12;
+    const currentAlpha = Math.max(0.08, Math.min(1, this.alpha + flicker));
 
-    ctx.save();
-    // Fine trailing dots
-    for (let i = 0; i < this.trail.length; i++) {
-      const p = this.trail[i];
-      ctx.globalAlpha = p.alpha * 0.35;
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, this.size * (0.4 + 0.45 * (i / this.trail.length)), 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 1. Sleek trailing motion streak (clean 60fps single-stroke trail)
+    ctx.strokeStyle = this.color;
+    ctx.globalAlpha = currentAlpha * 0.5;
+    ctx.lineWidth = this.size * 0.9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(this.prevX, this.prevY);
+    ctx.lineTo(this.x, this.y);
+    ctx.stroke();
 
-    // Spark Core
+    // 2. Spark Core
     ctx.globalAlpha = currentAlpha;
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hot center sparkle
-    if (currentAlpha > 0.35) {
+    // 3. Hot center sparkle for bright sparks
+    if (currentAlpha > 0.38) {
       ctx.fillStyle = this.secondaryColor;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size * 0.45, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    // Subtle soft outer aura (compact, only 2x size)
-    ctx.globalAlpha = currentAlpha * 0.25;
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * 2.0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
   }
 }
 
 // Function to Create Authentic Festive Fireworks Bursts (NO HUGE BALL FLASH)
 function createBurst(x, y, palette, type = 'peony') {
-  // Crisp tiny pop spark at explosion center (Only ~4.5px micro-flash, NOT a huge ball!)
+  const isMobile = width < 768;
+
+  // Tiny pop spark at explosion center (Only ~1.8px micro-flash)
   activeSparks.push({
-    x: x, y: y, alpha: 0.95, decayRate: 14.0, // fades in ~0.07s
+    x: x, y: y, alpha: 0.9, decayRate: 14.0,
     update: function(dt) { this.alpha -= this.decayRate * dt; return this.alpha > 0; },
     draw: function() {
       if (!ctx) return;
-      ctx.save();
-      // Tiny white center pop
       ctx.globalAlpha = this.alpha * 0.8;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(this.x, this.y, 1.8, 0, Math.PI * 2);
       ctx.fill();
-
-      // Small color glint
-      ctx.globalAlpha = this.alpha * 0.35;
-      ctx.fillStyle = palette.colors[0];
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, 4.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
     }
   });
 
-  const isMobile = width < 600;
+  // Guard active spark pool on mobile to eliminate any frame lag
+  const maxPool = isMobile ? 55 : 95;
+  if (activeSparks.length > maxPool) {
+    activeSparks.splice(0, activeSparks.length - maxPool + 12);
+  }
 
   if (type === 'willow') {
     // Elegant Willow: Sparks arc out then cascade down with glowing trails
-    const sparkCount = isMobile ? 26 : 38;
+    const sparkCount = isMobile ? 18 : 30;
     for (let i = 0; i < sparkCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.4 + Math.pow(Math.random(), 0.6) * 3.2;
+      const speed = 1.4 + Math.pow(Math.random(), 0.6) * 3.0;
       const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed - 0.5;
+      const vy = Math.sin(angle) * speed - 0.4;
       const col = palette.colors[i % palette.colors.length];
       activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, {
         isWillow: true,
-        lifespan: 2.2 + Math.random() * 0.7,
+        lifespan: 1.9 + Math.random() * 0.5,
         drag: 0.965,
-        gravity: 0.075
+        gravity: 0.072
       }));
     }
   } else if (type === 'ring') {
     // Symmetrical Royal Ring with contrasting center stars
-    const count = isMobile ? 24 : 32;
-    const ringSpeed = 2.4 + Math.random() * 0.5;
+    const count = isMobile ? 16 : 26;
+    const ringSpeed = 2.3 + Math.random() * 0.4;
     const mainColor = palette.colors[0];
     const secondColor = palette.colors[Math.min(2, palette.colors.length - 1)];
 
@@ -397,37 +362,40 @@ function createBurst(x, y, palette, type = 'peony') {
       const vx = Math.cos(angle) * ringSpeed;
       const vy = Math.sin(angle) * ringSpeed;
       const col = i % 2 === 0 ? mainColor : secondColor;
-      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.9 + Math.random() * 0.5 }));
+      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.7 + Math.random() * 0.4 }));
     }
-    const centerCount = isMobile ? 6 : 10;
+    const centerCount = isMobile ? 4 : 8;
     for (let i = 0; i < centerCount; i++) {
-      const speed = Math.random() * 1.1;
+      const speed = Math.random() * 1.0;
       const angle = Math.random() * Math.PI * 2;
-      activeSparks.push(new FireworkSpark(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, palette.colors[1], '#ffffff', { lifespan: 1.6 }));
+      activeSparks.push(new FireworkSpark(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, palette.colors[1], '#ffffff', { lifespan: 1.4 }));
     }
   } else {
     // Classic Peony burst
-    const sparkCount = isMobile ? 28 : 42;
+    const sparkCount = isMobile ? 20 : 34;
     for (let i = 0; i < sparkCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.6 + Math.pow(Math.random(), 0.5) * 3.0;
+      const speed = 1.5 + Math.pow(Math.random(), 0.5) * 2.8;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       const col = palette.colors[Math.floor(Math.random() * palette.colors.length)];
-      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.8 + Math.random() * 0.6 }));
+      activeSparks.push(new FireworkSpark(x, y, vx, vy, col, palette.core, { lifespan: 1.7 + Math.random() * 0.5 }));
     }
   }
 }
 
 // Responsive Launch Coordinator
 function launchFirework(targetX, targetY, options = {}) {
-  const isMobile = width < 600;
+  const isMobile = width < 768;
+  const maxRockets = isMobile ? 2 : 3;
+  if (activeRockets.length >= maxRockets) return;
+
   // Frame bursts cleanly in the upper dusk sky
   const maxSkyY = isMobile ? height * 0.42 : height * 0.56;
   const minSkyY = height * 0.12;
   const clampedY = Math.max(minSkyY, Math.min(targetY, maxSkyY));
   
-  const startX = targetX + (Math.random() - 0.5) * (isMobile ? 35 : 70);
+  const startX = targetX + (Math.random() - 0.5) * (isMobile ? 30 : 60);
   activeRockets.push(new FireworkRocket(targetX, clampedY, startX, options));
 }
 window.launchFirework = launchFirework;
@@ -452,20 +420,21 @@ function handleInteractiveFirework(clientX, clientY, target) {
   // 1. Primary firework directed to the tap location
   launchFirework(clientX, clientY);
 
-  // 2. Cascading show on repeated clicks
-  if (clickCount >= 2) {
+  // 2. Cascading show on repeated clicks (desktop only to keep mobile 60fps solid)
+  const isMobile = width < 768;
+  if (clickCount >= 2 && !isMobile) {
     setTimeout(() => {
-      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 100 : 160);
+      const offsetX = clientX + (Math.random() - 0.5) * 160;
       const offsetY = Math.max(80, clientY + (Math.random() - 0.5) * 60);
       launchFirework(offsetX, offsetY, { type: 'willow' });
-    }, 180);
+    }, 200);
   }
-  if (clickCount >= 3) {
+  if (clickCount >= 3 && !isMobile) {
     setTimeout(() => {
-      const offsetX = clientX + (Math.random() - 0.5) * (width < 600 ? 150 : 240);
+      const offsetX = clientX + (Math.random() - 0.5) * 220;
       const offsetY = Math.max(70, clientY - 50 - Math.random() * 60);
       launchFirework(offsetX, offsetY, { type: 'peony' });
-    }, 360);
+    }, 400);
     clickCount = 0; // reset sequence
   }
 }
@@ -485,17 +454,21 @@ if (heroSection) {
   }, { passive: true });
 }
 
+// Viewport visibility trackers to pause off-screen canvas loops
+let isHeroVisible = true;
+let isWinterVisible = false;
+
 // Ambient Automatic Festive Fireworks Show
 let lastAmbientTime = 0;
-let nextAmbientInterval = 2200;
+let nextAmbientInterval = 2400;
 
 function checkAmbientFireworks(timestamp) {
   // Only launch ambient fireworks when user is viewing the hero sky (never in footer or cards)
-  if (window.scrollY > height * 0.5) return;
+  if (!isHeroVisible || window.scrollY > height * 0.45) return;
 
   if (timestamp - lastAmbientTime > nextAmbientInterval) {
     lastAmbientTime = timestamp;
-    nextAmbientInterval = 3200 + Math.random() * 2400; // 3.2s - 5.6s
+    nextAmbientInterval = 3400 + Math.random() * 2600; // 3.4s - 6.0s
 
     const skyMinX = width * 0.15;
     const skyMaxX = width * 0.85;
@@ -511,6 +484,14 @@ let fireworkAnimFrameId = null;
 let lastFrameTimestamp = 0;
 
 function animateFireworks(timestamp) {
+  fireworkAnimFrameId = requestAnimationFrame(animateFireworks);
+
+  // If hero is scrolled out of viewport, skip rendering
+  if (!isHeroVisible) {
+    lastFrameTimestamp = timestamp;
+    return;
+  }
+
   if (!lastFrameTimestamp) lastFrameTimestamp = timestamp;
   let dt = (timestamp - lastFrameTimestamp) / 1000;
   lastFrameTimestamp = timestamp;
@@ -547,8 +528,6 @@ function animateFireworks(timestamp) {
       }
     }
   }
-
-  fireworkAnimFrameId = requestAnimationFrame(animateFireworks);
 }
 
 // Start fireworks animation
@@ -652,16 +631,17 @@ class Snowflake {
     const r = this.radius;
 
     if (this.type === 1 && r >= 3.2) {
-      // 1. Ornate 6-pointed Dendrite Crystal Snowflake
+      // 1. Ornate 6-pointed Dendrite Crystal Snowflake (Fast, zero-overhead crisp strokes)
       snowCtx.strokeStyle = '#ffffff';
-      snowCtx.lineWidth = Math.max(1.6, r * 0.22);
+      snowCtx.lineWidth = Math.max(1.5, r * 0.22);
       snowCtx.lineCap = 'round';
-      snowCtx.shadowColor = 'rgba(255, 255, 255, 0.95)';
-      snowCtx.shadowBlur = 6;
+
+      const rotStep = Math.PI / 3;
+      const b1 = r * 0.55;
+      const b2 = r * 0.85;
 
       for (let i = 0; i < 6; i++) {
-        snowCtx.save();
-        snowCtx.rotate((i * Math.PI) / 3);
+        snowCtx.rotate(rotStep);
 
         // Main axis
         snowCtx.beginPath();
@@ -670,7 +650,6 @@ class Snowflake {
         snowCtx.stroke();
 
         // Upper chevrons
-        const b1 = r * 0.55;
         snowCtx.beginPath();
         snowCtx.moveTo(-r * 0.28, -b1 + r * 0.18);
         snowCtx.lineTo(0, -b1);
@@ -678,14 +657,11 @@ class Snowflake {
         snowCtx.stroke();
 
         // Lower chevrons
-        const b2 = r * 0.85;
         snowCtx.beginPath();
         snowCtx.moveTo(-r * 0.2, -b2 + r * 0.14);
         snowCtx.lineTo(0, -b2);
         snowCtx.lineTo(r * 0.2, -b2 + r * 0.14);
         snowCtx.stroke();
-
-        snowCtx.restore();
       }
 
       // Center glowing nucleus
@@ -697,19 +673,16 @@ class Snowflake {
     } else if (this.type === 2 && r >= 2.8) {
       // 2. 6-Pointed Star Crystal
       snowCtx.strokeStyle = '#ffffff';
-      snowCtx.lineWidth = Math.max(1.5, r * 0.2);
+      snowCtx.lineWidth = Math.max(1.4, r * 0.2);
       snowCtx.lineCap = 'round';
-      snowCtx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-      snowCtx.shadowBlur = 5;
 
+      const rotStep = Math.PI / 3;
       for (let i = 0; i < 6; i++) {
-        snowCtx.save();
-        snowCtx.rotate((i * Math.PI) / 3);
+        snowCtx.rotate(rotStep);
         snowCtx.beginPath();
         snowCtx.moveTo(0, 0);
         snowCtx.lineTo(0, -r);
         snowCtx.stroke();
-        snowCtx.restore();
       }
       snowCtx.fillStyle = '#ffffff';
       snowCtx.beginPath();
@@ -717,12 +690,8 @@ class Snowflake {
       snowCtx.fill();
 
     } else {
-      // 3. Soft Glowing Snow Flurry Orb (Bokeh Flurry)
-      const grad = snowCtx.createRadialGradient(0, 0, 0, 0, 0, r);
-      grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
-      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      snowCtx.fillStyle = grad;
+      // 3. Soft Glowing Snow Flurry Orb (Clean, high-performance bokeh)
+      snowCtx.fillStyle = 'rgba(255, 255, 255, 0.88)';
       snowCtx.beginPath();
       snowCtx.arc(0, 0, r, 0, Math.PI * 2);
       snowCtx.fill();
@@ -753,19 +722,16 @@ class FrostSparkle {
 
   draw() {
     if (!snowCtx) return;
-    snowCtx.save();
     snowCtx.globalAlpha = Math.max(0, this.life);
     snowCtx.fillStyle = this.color;
-    snowCtx.shadowColor = this.color;
-    snowCtx.shadowBlur = 5;
     snowCtx.beginPath();
     snowCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     snowCtx.fill();
-    snowCtx.restore();
   }
 }
 
-const SNOWFLAKE_COUNT = 140; // Rich, prominent snowfall clearly visible on mobile screens
+const isMobileScreen = window.innerWidth < 768;
+const SNOWFLAKE_COUNT = isMobileScreen ? 48 : 80; // Optimized count ensures silky 60fps across mobile GPUs
 const ambientSnowflakes = [];
 const spawnedSnowflakes = [];
 const frostSparkles = [];
@@ -780,15 +746,20 @@ function initAmbientSnow() {
 
 let snowAnimTimer = 0;
 function animateWinterSnow() {
-  if (!snowCtx) return;
+  requestAnimationFrame(animateWinterSnow);
+
+  // If winter zone is not visible, pause rendering to save 100% CPU/GPU
+  if (!isWinterVisible || !snowCtx) return;
+
   snowCtx.clearRect(0, 0, snowWidth, snowHeight);
   snowAnimTimer += 1;
 
   // 1. Ambient Falling Snow
-  ambientSnowflakes.forEach(flake => {
+  for (let i = 0; i < ambientSnowflakes.length; i++) {
+    const flake = ambientSnowflakes[i];
     flake.update(snowAnimTimer);
     flake.draw(snowAnimTimer);
-  });
+  }
 
   // 2. Interactive Spawned Snowflakes
   for (let i = spawnedSnowflakes.length - 1; i >= 0; i--) {
@@ -810,8 +781,6 @@ function animateWinterSnow() {
       frostSparkles.splice(i, 1);
     }
   }
-
-  requestAnimationFrame(animateWinterSnow);
 }
 
 if (snowCtx) {

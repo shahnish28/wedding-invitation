@@ -25,8 +25,8 @@ if (typeof Lenis !== 'undefined') {
  * Venue: Fairfield by Marriott Hotel, Andheri East, Mumbai
  */
 
-// Target Wedding Commencement Date: February 27, 2027, 19:00:00 (Sangeet Sandhya)
-const weddingDate = new Date("2027-02-27T19:00:00");
+// Target Wedding Commencement Date: February 27, 2027, 18:00:00 (Sangeet Sandhya, 6:00 PM)
+const weddingDate = new Date("2027-02-27T18:00:00");
 
 // ==========================================
 // 1. REALISTIC FESTIVE WEDDING FIREWORKS SIMULATION
@@ -953,11 +953,11 @@ function scrollToSection(id) {
 function addToGoogleCalendar() {
   const title = encodeURIComponent("Jimmy Jani & Palak Nayak - Wedding Celebrations");
   const details = encodeURIComponent(
-    "You are cordially invited to celebrate the union of Jimmy Jani & Palak Nayak.\n\nEvents:\n• Sangeet Sandhya: Saturday 27th Feb 2027, 7:00 PM Onwards\n• The Marriage: Sunday 28th Feb 2027, 4:00 PM Onwards\n\nVenue: Fairfield by Marriott Hotel, Near Mumbai International Airport, Andheri East, Mumbai – 400099, India."
+    "You are cordially invited to celebrate the union of Jimmy Jani & Palak Nayak.\n\nEvents:\n• Sangeet Sandhya: Saturday 27th Feb 2027, 6:00 PM Onwards\n• The Marriage: Sunday 28th Feb 2027, 4:00 PM Onwards\n\nVenue: Fairfield by Marriott Hotel, Near Mumbai International Airport, Andheri East, Mumbai – 400099, India."
   );
   const location = encodeURIComponent("Fairfield by Marriott Hotel, Near Mumbai International Airport, Andheri East, Mumbai – 400099, India");
-  // 20270227T133000Z (7:00 PM IST is 13:30 UTC) to 20270228T183000Z
-  const dates = "20270227T133000Z/20270228T183000Z";
+  // 20270227T123000Z (6:00 PM IST is 12:30 UTC) to 20270228T183000Z
+  const dates = "20270227T123000Z/20270228T183000Z";
   const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
   window.open(url, '_blank');
 }
@@ -966,7 +966,8 @@ function addSangeetToCalendar() {
   const title = encodeURIComponent("The Rytham of Beats - Sangeet Sandhya (Jimmy & Palak)");
   const details = encodeURIComponent("Sangeet Sandhya celebration for Jimmy Jani & Palak Nayak.\nVenue: Fairfield by Marriott Hotel, Mumbai.");
   const location = encodeURIComponent("Fairfield by Marriott Hotel, Andheri East, Mumbai");
-  const dates = "20270227T133000Z/20270227T183000Z";
+  // 20270227T123000Z (6:00 PM IST is 12:30 UTC) to 20270227T183000Z
+  const dates = "20270227T123000Z/20270227T183000Z";
   const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
   window.open(url, '_blank');
 }
@@ -991,7 +992,7 @@ BEGIN:VEVENT
 SUMMARY:Jimmy Jani & Palak Nayak Wedding Celebration
 DESCRIPTION:The wedding festivities of Jimmy Jani & Palak Nayak at Fairfield by Marriott Hotel, Mumbai.
 LOCATION:Fairfield by Marriott Hotel, Near Mumbai International Airport, Andheri East, Mumbai - 400099
-DTSTART:20270227T190000
+DTSTART:20270227T180000
 DTEND:20270228T230000
 STATUS:CONFIRMED
 END:VEVENT
